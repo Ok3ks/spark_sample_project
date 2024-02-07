@@ -71,10 +71,12 @@ def categorical_features_indexed(features = categorical_features()) -> list:
     categorical_features_indexed = [c + "_index" for c in features]
     return categorical_features_indexed
 
-def one_hot_encoded_index(features = categorical_features()) -> list:
+def one_hot_encoded_index(df, features = categorical_features()) -> list:
     "Returns one hot encoded index"
-    one_hot_encoded_index = [c + "_one_hot" for c in features]
-    return one_hot_encoded_index
+    one_hot = []
+    for c in features:
+        one_hot.extend([c + '_' + a[c] for a in list(df.select(c).distinct().collect())])
+    return one_hot
 
 def input_features(*features:list) -> list:
     " Returns all columns to be used as features"
@@ -84,10 +86,10 @@ def input_features(*features:list) -> list:
         temp.extend(a)
     return temp
 
-def compute_rolling_aggregate() -> dict:
+def compute_rolling_aggregate(df) -> dict:
     "Computes rolling aggregate of a minutes and last 30 minutes"
 
-    return {
+    return df.withColumns({
         "source_ip_avg_bytes_last_min": generate_rolling_aggregate(col="orig_ip_bytes", operation="avg",timestamp_col="dt",window_in_minutes=1),
         "source_ip_avg_bytes_last_30_min": generate_rolling_aggregate(col="orig_ip_bytes", operation="avg",timestamp_col="dt",window_in_minutes=30),
         "dest_ip_count_last_min": generate_rolling_aggregate(col="destination_ip", operation="count",timestamp_col="dt",window_in_minutes=1),
@@ -96,7 +98,7 @@ def compute_rolling_aggregate() -> dict:
         "dest_port_count_last_30_min": generate_rolling_aggregate(col="destination_port", operation="count",timestamp_col="dt",window_in_minutes=30),
         "source_ip_avg_pkts_last_min": generate_rolling_aggregate(col="orig_pkts",partition_by="source_ip", operation="avg",timestamp_col="dt",window_in_minutes=1),
         "source_ip_avg_pkts_last_30_min": generate_rolling_aggregate(col="orig_pkts",partition_by="source_ip",operation="avg",timestamp_col="dt",window_in_minutes=30)
-    }
+    })
 
 def get_feature_importance(pipeline:Pipeline) -> dict :
 
@@ -104,3 +106,20 @@ def get_feature_importance(pipeline:Pipeline) -> dict :
         "importance": list(pipeline.stages[-1].featureImportances),
         "feature": pipeline.stages[-2].getInputCols(),
     }
+
+if __name__ == "main":
+
+    import argparse
+    parser = argparse.ArgumentParser('Feature Engineering Module')
+
+    parser.add_argument('output_path')
+    parser.add_argument('app_name')
+    parser.add_argument('cleaned_parquet_path')
+
+    args = parser.parse_args()
+        
+    spark = SparkSession.builder.appName(args.app_name).getOrCreate()
+    df = spark.read.parquet(args.cleaned_parquet_path)
+
+    df = compute_rolling_aggregate(df)
+    df.write.parquet(args.output_path, mode="overwrite")

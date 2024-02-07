@@ -28,9 +28,11 @@ def get_Pipeline(categorical_features: Union[Any, list] = categorical_features()
     if categorical_features and numerical_features:
         inputCols = input_features(one_hot_encoded_index(categorical_features), numerical_features)
 
+    #assert inputCols in df
+
     assembler = VectorAssembler(inputCols=inputCols, outputCol="features", handleInvalid="skip")
     randomforest = RandomForestClassifier(featuresCol="features", labelCol = labelCol, numTrees=100)
-    pipeline = Pipeline(stages=[indexer, assembler,one_hot_encoder, randomforest])
+    pipeline = Pipeline(stages=[indexer,one_hot_encoder, assembler, randomforest])
 
     return pipeline
 

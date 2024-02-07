@@ -49,3 +49,15 @@ def preproc(filepath, output_path, save = True):
         if save == True:
                 preproc_df.write.parquet(output_path, mode = 'overwrite')
         return preproc_df
+
+if __name__ == "__main__":
+        
+        import argparse
+        parser = argparse.ArgumentParser(" Cleaning function")
+        
+        parser.add_argument("filepath")
+        parser.add_argument("output_path" )
+
+        args = parser.parse_args()
+
+        spark = preproc(args.filepath, args.output_path)
