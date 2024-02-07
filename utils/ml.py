@@ -6,7 +6,7 @@ from pyspark.sql import SparkSession
 
 from typing import Union,Any
 from utils.feature_engineering import categorical_features, numerical_features, input_features
-from utils.feature_engineering import one_hot_encoded_index, categorical_features_indexed
+from utils.feature_engineering import categorical_features_indexed
 
 def get_Pipeline(categorical_features: Union[Any, list] = categorical_features(), 
                  numerical_features: Union[Any, list] = numerical_features(),
@@ -17,16 +17,18 @@ def get_Pipeline(categorical_features: Union[Any, list] = categorical_features()
     #spark = SparkSession.builder.appName("anomaly").getOrCreate()
 
     if categorical_features :
-        indexer = StringIndexer(inputCols=categorical_features, outputCols=categorical_features_indexed(categorical_features), handleInvalid='skip')
-        one_hot_encoder = OneHotEncoder(inputCols=categorical_features_indexed(categorical_features), outputCols = one_hot_encoded_index(categorical_features), handleInvalid='skip')
 
-        inputCols = input_features(one_hot_encoded_index(categorical_features))
+        indexer = StringIndexer(inputCols=categorical_features, outputCols=categorical_features_indexed(categorical_features), handleInvalid='skip')
+        one_hot_encoder = OneHotEncoder(inputCols=categorical_features_indexed(categorical_features), outputCols = [c + '_one_hot' for c in categorical_features])
+
+        inputCols = input_features(categorical_features)
 
     if numerical_features :
+        #Add numerical features transformatiojn
         pass
 
     if categorical_features and numerical_features:
-        inputCols = input_features(one_hot_encoded_index(categorical_features), numerical_features)
+        inputCols = input_features([c + '_one_hot' for c in categorical_features], numerical_features)
 
     #assert inputCols in df
 

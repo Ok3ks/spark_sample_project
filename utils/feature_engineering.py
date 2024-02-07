@@ -72,7 +72,7 @@ def categorical_features_indexed(features = categorical_features()) -> list:
     return categorical_features_indexed
 
 def one_hot_encoded_index(df, features = categorical_features()) -> list:
-    "Returns one hot encoded index"
+    "Returns one hot encoded index, used to get a list of one hot encoded index"
     one_hot = []
     for c in features:
         one_hot.extend([c + '_' + a[c] for a in list(df.select(c).distinct().collect())])
@@ -100,11 +100,11 @@ def compute_rolling_aggregate(df) -> dict:
         "source_ip_avg_pkts_last_30_min": generate_rolling_aggregate(col="orig_pkts",partition_by="source_ip",operation="avg",timestamp_col="dt",window_in_minutes=30)
     })
 
-def get_feature_importance(pipeline:Pipeline) -> dict :
+def get_feature_importance(pipeline:Pipeline, features_list) -> dict :
 
     return {
         "importance": list(pipeline.stages[-1].featureImportances),
-        "feature": pipeline.stages[-2].getInputCols(),
+        "feature": features_list,
     }
 
 if __name__ == "main":
@@ -117,7 +117,7 @@ if __name__ == "main":
     parser.add_argument('cleaned_parquet_path')
 
     args = parser.parse_args()
-        
+
     spark = SparkSession.builder.appName(args.app_name).getOrCreate()
     df = spark.read.parquet(args.cleaned_parquet_path)
 
