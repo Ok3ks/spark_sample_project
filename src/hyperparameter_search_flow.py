@@ -10,7 +10,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
 from utils.ml import get_Pipeline, get_evaluator
-from utils.feature_engineering import categorical_features, one_hot_encoded_index
+from utils.feature_engineering import categorical_features, input_features
 
 import numpy as np
 
@@ -19,6 +19,8 @@ class trainTest():
     def __init__(self):
         spark = SparkSession.builder.appName("anomaly").getOrCreate()
         df = spark.read.parquet("./data/features/train_features.pq")
+
+
   
         self.train = df.where(~F.col("source_ip").like("10%"))
         self.test = df.where(F.col("source_ip").like("10%"))
@@ -30,14 +32,6 @@ class trainTest():
         return self.test
 
 class HyperparameterSearch(FlowSpec):
-    numerical_features = ['duration', 'orig_bytes', 'resp_bytes',
-                    'orig_pkts','orig_ip_bytes','resp_pkts',
-                    'resp_ip_bytes', 'source_ip_count_last_min',
-                    'source_ip_count_last_30_min']
-
-    categorical_features = ["proto", "service", "conn_state"]
-    categorical_features_indexed = [c + "_index" for c in categorical_features]
-    input_features = numerical_features + categorical_features_indexed
 
     @step
     def start(self):
@@ -60,6 +54,7 @@ class HyperparameterSearch(FlowSpec):
         test = trainTest()._testing_data()
 
         spark = SparkSession.builder.appName("anomaly").getOrCreate()
+        sc = spark.sparkContext
 
         pipeline = get_Pipeline(categorical_features= categorical_features())
         pipeline = pipeline.fit(train)
